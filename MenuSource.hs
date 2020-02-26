@@ -5,6 +5,7 @@ import System.Directory
 import System.Console.ANSI
 import System.IO
 
+getFilesInfo :: IO ()
 getFilesInfo = do
     existense <- doesFileExist ".files.csv"
     if existense
@@ -15,7 +16,7 @@ getFilesInfo = do
 
     scan_dir "."
 
-
+print_menu :: IO ()
 print_menu = do
     putStr $ "#########################################" ++ "\n"
     putStr $ "#                                       #" ++ "\n"
@@ -28,6 +29,7 @@ print_menu = do
     putStr $ "#########################################" ++ "\n\n"
  
 
+io_handler :: IO b
 io_handler = do
     putStr "Option: "
     hFlush stdout
@@ -39,7 +41,7 @@ io_handler = do
             setSGR [SetColor Foreground Vivid Green]
             putStr "Rescan complete.\n\n"
             setSGR [SetColor Foreground Vivid Yellow]
-            scan_dir "."
+            getFilesInfo
             print_menu
 
         "2" -> printTree "."
@@ -49,7 +51,6 @@ io_handler = do
             hFlush stdout
             filename <- getLine
             findDoublesByName filename
-            return ()
 
         otherwise -> do
             clearScreen 

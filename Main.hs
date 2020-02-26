@@ -6,7 +6,7 @@ import FileHandler
 import System.IO
 import System.Console.ANSI
 
-
+main :: IO b
 main = do
     getFilesInfo
 

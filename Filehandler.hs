@@ -2,20 +2,22 @@
 
 module FileHandler where
 
-------
-import System.IO
+--------- Dir walk ---------
 import System.FilePath
 import System.Directory
+
+---- Collect files info ----
 import System.Posix.Files
 import Data.Time.Clock.POSIX
-------
-import qualified Data.ByteString.Lazy as LB
 import Data.Digest.Pure.CRC32
-------
+
+------ Csv read/wrire ------
 import Data.Csv
-import qualified Data.Vector as V
 import GHC.Generics
-------
+import qualified Data.Vector as V
+import qualified Data.ByteString.Lazy as LB
+
+----------------------------
 
 data FileInfo = FileInfo FilePath FilePath String deriving Generic 
 
@@ -80,8 +82,6 @@ printTree path = do
             return ()
 
         else do
-            -- hash <- getHash path
-            -- LB.appendFile ".files.csv" $ encode [FileInfo (takeFileName path) (takeDirectory path) hash]
             putStrLn $ checkIfInRoot $ fileConverter path
 
 

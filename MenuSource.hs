@@ -1,16 +1,23 @@
 module MenuSource where 
 
+import System.IO
 import FileHandler
 import System.Directory
 import System.Console.ANSI
-import System.IO
 
 getFilesInfo :: IO ()
 getFilesInfo = do
-    existense <- doesFileExist ".files.csv"
+    existense <- doesFileExist ".system/.files.csv"
     if existense
         then do
-            removeFile ".files.csv"
+            removeFile ".system/.files.csv"
+        else do
+            return ()
+
+    existense <- doesFileExist ".system/.dirs.csv"
+    if existense
+        then do
+            removeFile ".system/.dirs.csv"
         else do
             return ()
 
@@ -18,15 +25,15 @@ getFilesInfo = do
 
 print_menu :: IO ()
 print_menu = do
-    putStr $ "#########################################" ++ "\n"
-    putStr $ "#                                       #" ++ "\n"
-    putStr $ "#     Insert one of these options:      #" ++ "\n"
-    putStr $ "#                                       #" ++ "\n"
-    putStr $ "#  1 - rescan current dir               #" ++ "\n"
-    putStr $ "#  2 - print file tree                  #" ++ "\n"
-    putStr $ "#  3 + filename - find doubles by name  #" ++ "\n"
-    putStr $ "#                                       #" ++ "\n"
-    putStr $ "#########################################" ++ "\n\n"
+    putStr $ "##################################################" ++ "\n"
+    putStr $ "#                                                #" ++ "\n"
+    putStr $ "#          Insert one of these options:          #" ++ "\n"
+    putStr $ "#                                                #" ++ "\n"
+    putStr $ "#       1 - rescan current dir                   #" ++ "\n"
+    putStr $ "#       2 - print file tree                      #" ++ "\n"
+    putStr $ "#       3 + filename - find doubles by name      #" ++ "\n"
+    putStr $ "#                                                #" ++ "\n"
+    putStr $ "##################################################" ++ "\n\n"
  
 
 io_handler :: IO b
@@ -39,12 +46,18 @@ io_handler = do
         "1" -> do 
             clearScreen
             setSGR [SetColor Foreground Vivid Green]
-            putStr "Rescan complete.\n\n"
+            putStrLn "Rescan complete.\n"
             setSGR [SetColor Foreground Vivid Yellow]
             getFilesInfo
             print_menu
 
-        "2" -> printTree "."
+        "2" -> do
+            clearScreen
+            setSGR [SetColor Foreground Vivid Blue]
+            currDir <- getCurrentDirectory
+            putStrLn $ currDir 
+            printFiles "." "." " " 
+            setSGR [SetColor Foreground Vivid Yellow]
         
         "3" -> do 
             putStr "\nInsert filename: "

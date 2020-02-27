@@ -1,5 +1,3 @@
--- {-# LANGUAGE BangPatterns #-}
-
 import System.Directory
 import MenuSource
 import FileHandler

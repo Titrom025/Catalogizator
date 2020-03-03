@@ -7,7 +7,7 @@ import System.FilePath
 import System.Directory
 
 ---- Collect files info ----
-import System.Posix.Files
+--import System.Posix.Files
 import Data.Time.Clock.POSIX
 import Data.Digest.Pure.CRC32
 
@@ -29,23 +29,6 @@ instance ToRecord FileInfo
 instance FromRecord DirInfo
 instance ToRecord DirInfo
 
---buildGraph path = foldl (\(x:xs) y -> [x] ++ "    " ++ xs) "1|-- " (init $ splitDirectories path)
-
---graphConvertor path file = buildGraph path ++ file
-
---deleteSimv (x:y:path) = [x] ++ path
-
-
---remove2simv (x:y:xs) = xs
---remove2simv (x:_) = [x] 
-
-
-------- Grab file info -------
-getFSize :: FilePath -> IO String
-getFSize path = getFileStatus path >>= \s -> return $ show $ fileSize s
-
-getFTime :: FilePath -> IO String
-getFTime path = getFileStatus path >>= \s -> return $ show $ posixSecondsToUTCTime $ modificationTimeHiRes s
 
 getHash :: FilePath -> IO String
 getHash file = do
@@ -56,7 +39,7 @@ getHash file = do
 
 
 
-scan_dir :: FilePath -> IO ()
+--scan_dir :: FilePath -> IO ()
 scan_dir path = do
     isSystemExist <- doesDirectoryExist ".system"
 
@@ -74,29 +57,30 @@ scan_dir path = do
             let list = [".", "..", ".DS_Store", ".git", ".gitignore", ".files.csv", ".system"]
             let nonDotFiles = filter (not . (`elem` list)) files
 
-            LB.appendFile ".system/.dirs.csv" $ encode [DirInfo (takeFileName path) (takeDirectory path)]
+            LB.appendFile (".system/.dirs.csv") $ encode [DirInfo (takeFileName path) (takeDirectory path)]
             mapM (\file -> scan_dir (path </> file)) nonDotFiles
         
             return ()
 
         else do
             hash <- getHash path
-            LB.appendFile ".system/.files.csv" $ encode [FileInfo (takeFileName path) (takeDirectory path) hash]
+            LB.appendFile (".system/.files.csv") $ encode [FileInfo (takeFileName path) (takeDirectory path) hash]
 
-printFiles :: [Char] -> FilePath -> [Char] -> IO ()
-printFiles dirPath dirName strPath = do
-    csvFilesData <- LB.readFile ".system/.files.csv"
-    csvDirData <- LB.readFile ".system/.dirs.csv"
+
+--printFiles :: [Char] -> FilePath -> [Char] -> IO ()
+printFiles startDir dirPath dirName strPath = do
+    csvFilesData <- LB.readFile (".system/.files.csv")
+    csvDirData <- LB.readFile (".system/.dirs.csv")
     
-    LB.writeFile (".system/Dirsinfo-" ++ dirName ++ ".csv") $  encode [DirInfo "dirName" "dirPath"]
-    LB.writeFile (".system/Fileinfo-" ++ dirName ++ ".csv") $  encode [FileInfo "fileName" "filePath" "hash"]
+    LB.writeFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv") $  encode [DirInfo "dirName" "dirPath"]
+    LB.writeFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv") $  encode [FileInfo "fileName" "filePath" "hash"]
 
     case decode NoHeader csvFilesData of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ (FileInfo fName fDir hash) ->
             if dirPath == fDir
                 then do
-                    LB.appendFile (".system/Fileinfo-" ++ dirName ++ ".csv") $ encode [FileInfo fName fDir hash]
+                    LB.appendFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv") $ encode [FileInfo fName fDir hash]
                 else do
                     return ()
 
@@ -105,13 +89,13 @@ printFiles dirPath dirName strPath = do
         Right v -> V.forM_ v $ \ (DirInfo dName dDir) ->
             if dirPath == dDir && dirName /= dName 
                 then do
-                    LB.appendFile (".system/Dirsinfo-" ++ dirName ++ ".csv") $  encode [DirInfo dName dDir]
-                    LB.appendFile (".system/Fileinfo-" ++ dirName ++ ".csv") $  encode [FileInfo dName dDir "0"]
+                    LB.appendFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv") $  encode [DirInfo dName dDir]
+                    LB.appendFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv") $  encode [FileInfo dName dDir "0"]
                 else do
                     return ()
 
-    cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ dirName ++ ".csv")
-    removeFile (".system/Fileinfo-" ++ dirName ++ ".csv")
+    cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
+    removeFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
 
     case decode NoHeader cvsFileInfo of
         Left err -> putStrLn err
@@ -132,8 +116,8 @@ printFiles dirPath dirName strPath = do
                 else do
                     return ()
 
-    csvDirInfo <- LB.readFile (".system/Dirsinfo-" ++ dirName ++ ".csv")
-    removeFile (".system/Dirsinfo-" ++ dirName ++ ".csv")
+    csvDirInfo <- LB.readFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv")
+    removeFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv")
 
     case decode NoHeader csvDirInfo of
         Left err -> putStrLn err
@@ -143,10 +127,10 @@ printFiles dirPath dirName strPath = do
                     if curr == (V.last v)
                         then do
                             putStrLn $ strPath ++ "└── " ++ dName
-                            printFiles (dDir ++ "/" ++ dName) dName (strPath ++ "    ")
+                            printFiles startDir (dDir ++ "/" ++ dName) dName (strPath ++ "    ")
                         else do
                             putStrLn $ strPath ++ "├── " ++ dName
-                            printFiles (dDir ++ "/" ++ dName) dName (strPath ++ "│   ")
+                            printFiles startDir (dDir ++ "/" ++ dName) dName (strPath ++ "│   ")
                 else do
                     return ()
    

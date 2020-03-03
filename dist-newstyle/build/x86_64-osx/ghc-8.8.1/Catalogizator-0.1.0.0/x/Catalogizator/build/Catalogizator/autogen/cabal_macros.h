@@ -99,17 +99,6 @@
   (major1) == 1 && (major2) == 9 && (minor) <= 3)
 #endif /* MIN_VERSION_time */
 
-/* package unix-2.7.2.2 */
-#ifndef VERSION_unix
-#define VERSION_unix "2.7.2.2"
-#endif /* VERSION_unix */
-#ifndef MIN_VERSION_unix
-#define MIN_VERSION_unix(major1,major2,minor) (\
-  (major1) <  2 || \
-  (major1) == 2 && (major2) <  7 || \
-  (major1) == 2 && (major2) == 7 && (minor) <= 2)
-#endif /* MIN_VERSION_unix */
-
 /* package vector-0.12.1.2 */
 #ifndef VERSION_vector
 #define VERSION_vector "0.12.1.2"

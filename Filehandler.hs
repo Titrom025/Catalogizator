@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables, DeriveGeneric, BangPatterns #-}
 
 module FileHandler where
 
@@ -17,6 +17,8 @@ import GHC.Generics
 import qualified Data.Vector as V
 import qualified Data.ByteString.Lazy as LB
 
+
+import System.IO
 ----- Create data types ----
 
 data FileInfo = FileInfo FilePath FilePath String deriving (Generic, Eq) 
@@ -37,6 +39,7 @@ getHash file = do
     return $ show crc32Digest
 ------------------------------
 
+remove2simv (x:y:xs) = "-> " ++ xs
 
 
 --scan_dir :: FilePath -> IO ()
@@ -67,13 +70,13 @@ scan_dir path = do
             LB.appendFile (".system/.files.csv") $ encode [FileInfo (takeFileName path) (takeDirectory path) hash]
 
 
---printFiles :: [Char] -> FilePath -> [Char] -> IO ()
-printFiles startDir dirPath dirName strPath = do
+collectInfo dirPath dirName = do
     csvFilesData <- LB.readFile (".system/.files.csv")
     csvDirData <- LB.readFile (".system/.dirs.csv")
     
     LB.writeFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv") $  encode [DirInfo "dirName" "dirPath"]
     LB.writeFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv") $  encode [FileInfo "fileName" "filePath" "hash"]
+
 
     case decode NoHeader csvFilesData of
         Left err -> putStrLn err
@@ -94,13 +97,18 @@ printFiles startDir dirPath dirName strPath = do
                 else do
                     return ()
 
-    cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
-    removeFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
 
+
+--printFiles :: [Char] -> FilePath -> [Char] -> IO ()
+printFiles dirPath dirName strPath = do
+    collectInfo dirPath dirName
+
+
+    cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
     case decode NoHeader cvsFileInfo of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ curr@(FileInfo fName fDir hash) ->
-            if fDir == (takeDirectory dirPath ++ "/" ++ dirName)
+            if fDir == (takeDirectory dirPath ++ "/" ++ takeFileName dirName)
                 then do 
                     isDir <- doesDirectoryExist (dirPath ++ "/" ++ fName)
                     if isDir
@@ -109,10 +117,10 @@ printFiles startDir dirPath dirName strPath = do
                         else 
                             if curr == (V.last v)
                                 then do
-                                    putStrLn $ strPath ++ "└── " ++ fName
+                                    putStrLn $ strPath ++ "└─── " ++ fName
                                     putStrLn $ strPath
                                 else do
-                                    putStrLn $ strPath ++ "├── " ++ fName
+                                    putStrLn $ strPath ++ "├─── " ++ fName
                 else do
                     return ()
 
@@ -126,14 +134,35 @@ printFiles startDir dirPath dirName strPath = do
                 then do
                     if curr == (V.last v)
                         then do
-                            putStrLn $ strPath ++ "└── " ++ dName
-                            printFiles startDir (dDir ++ "/" ++ dName) dName (strPath ++ "    ")
+                            collectInfo (dDir ++ "/" ++ dName) dName
+                            cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ dName ++ ".csv")
+                            removeFile (".system/Fileinfo-" ++ dName ++ ".csv")
+
+                            if show cvsFileInfo == "\"fileName,filePath,hash\\r\\n\""
+                                then do
+                                    putStrLn $ strPath ++ "└─── " ++ dName
+                                else do
+                                    putStrLn $ strPath ++ "└──┬ " ++ dName
+
+                            printFiles (dDir ++ "/" ++ dName) dName (strPath ++ "   ")
                         else do
-                            putStrLn $ strPath ++ "├── " ++ dName
-                            printFiles startDir (dDir ++ "/" ++ dName) dName (strPath ++ "│   ")
+                            putStrLn $ strPath ++ "├──┬ " ++ dName
+                            printFiles (dDir ++ "/" ++ dName) dName (strPath ++ "│  ")
                 else do
                     return ()
    
+
+
+printListOfDirectories = do
+    csvData <- LB.readFile ".system/.dirs.csv"
+    putStrLn "Available dirs:"
+    case decode NoHeader csvData of
+        Left err -> putStrLn err
+        Right v -> V.forM_ v $ \ (DirInfo name path) ->
+            putStrLn $ remove2simv $ path </> name
+
+                
+
 
 findDoublesByName :: FilePath -> IO ()
 findDoublesByName search_name = do

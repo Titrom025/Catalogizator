@@ -58,9 +58,10 @@ print_menu = do
     putStr $ "#                                                                    #" ++ "\n"
     putStr $ "#                    Insert one of these options:                    #" ++ "\n"
     putStr $ "#                                                                    #" ++ "\n"
-    putStr $ "#                 1 - rescan current dir                             #" ++ "\n"
-    putStr $ "#                 2 - print file tree                                #" ++ "\n"
-    putStr $ "#                 3 + filename - find doubles by name                #" ++ "\n"
+    putStr $ "#                 1 - rescan root dir                                #" ++ "\n"
+    putStr $ "#                 2 - print file tree for root                       #" ++ "\n"
+    putStr $ "#                 3 - print file tree for directory by path          #" ++ "\n"
+    putStr $ "#                 4 + filename - find doubles by name                #" ++ "\n"
     putStr $ "#                                                                    #" ++ "\n"
     putStr $ "######################################################################" ++ "\n\n"
  
@@ -84,10 +85,9 @@ io_handler = do
         "2" -> do
             clearScreen
             setSGR [SetColor Foreground Vivid Blue]
-            putStr "Enter path to directory to overlook: \n"
-            currDir <- getLine
-    
-            printFiles currDir currDir currDir " "
+            currDir <- getCurrentDirectory
+            putStrLn $ currDir 
+            printFiles "." "." " "
             setSGR [SetColor Foreground Vivid  Cyan]
             putStr "\nTo call menu press Enter"
             getLine
@@ -98,16 +98,18 @@ io_handler = do
         "3" -> do
             clearScreen
             setSGR [SetColor Foreground Vivid Blue]
-            currDir <- getCurrentDirectory
-            putStrLn $ currDir 
-            printFiles "." "." "." " "
+            printListOfDirectories
+            putStrLn "\nEnter path to directory to overlook:"
+            currDirRaw <- getLine 
+            let currDir = "./" ++ currDirRaw
+    
+            printFiles currDir currDir " "
             setSGR [SetColor Foreground Vivid  Cyan]
             putStr "\nTo call menu press Enter"
             getLine
             setSGR [SetColor Foreground Vivid Yellow]
             clearScreen
-            print_menu
-        
+            print_menu    
         
         "4" -> do 
             putStr "\nInsert filename: "

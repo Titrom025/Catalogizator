@@ -36,21 +36,28 @@ checkWindowSize = do
 
 getFilesInfo :: IO ()
 getFilesInfo = do
-    existense <- doesFileExist (".system/.dirs.csv")
-    if existense
-        then do
-            removeFile (".system/.dirs.csv") 
-        else do
-            return ()
+    existenseDir <- doesFileExist (".system/.dirs.csv")
+    existenseFiles <- doesFileExist (".system/.files.csv") 
 
-    existense <- doesFileExist (".system/.files.csv") 
-    if existense
+    if existenseDir
         then do
-            removeFile (".system/.files.csv") 
+            if existenseFiles
+                then do
+                    return ()
+                else do
+                    removeFile (".system/.dirs.csv")
+                    scan_dir "."
         else do
-            return ()
+            if existenseFiles
+                then do
+                    removeFile (".system/.files.csv")
+                    scan_dir "."
+                else do
+                    scan_dir "."
 
-    scan_dir "."
+    
+    
+
 
 print_menu :: IO ()
 print_menu = do
@@ -79,11 +86,14 @@ io_handler = do
             setSGR [SetColor Foreground Vivid Green]
             putStrLn "Rescan complete.\n"
             setSGR [SetColor Foreground Vivid Yellow]
+            removeFile (".system/.dirs.csv")
+            removeFile (".system/.files.csv")
             getFilesInfo
             print_menu
 
         "2" -> do
             clearScreen
+            getFilesInfo
             setSGR [SetColor Foreground Vivid Blue]
             currDir <- getCurrentDirectory
             putStrLn $ currDir 

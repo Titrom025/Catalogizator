@@ -105,6 +105,7 @@ printFiles dirPath dirName strPath = do
 
 
     cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
+    removeFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
     case decode NoHeader cvsFileInfo of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ curr@(FileInfo fName fDir hash) ->

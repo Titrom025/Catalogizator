@@ -12,13 +12,15 @@ import Data.Time.Clock.POSIX
 import Data.Digest.Pure.CRC32
 
 ------ Csv read/wrire ------
+import System.IO
 import Data.Csv
 import GHC.Generics
 import qualified Data.Vector as V
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
+import GHC.IO.Handle
+import Crypto.Hash
 
-
-import System.IO
 ----- Create data types ----
 
 data FileInfo = FileInfo FilePath FilePath String deriving (Generic, Eq) 
@@ -32,11 +34,34 @@ instance FromRecord DirInfo
 instance ToRecord DirInfo
 
 
+
+sha1 :: B.ByteString -> Digest SHA1
+sha1 = hash
+
 getHash :: FilePath -> IO String
 getHash file = do
     fileContent <- LB.readFile file
-    let crc32Digest = crc32 fileContent
-    return $ show crc32Digest
+
+    fileHandle <- openFile file ReadMode
+    fileSize <- hFileSize fileHandle
+    
+    if fileSize < 10000
+        then do
+            fileContent <- B.readFile file
+            return $ show $ sha1 fileContent
+
+        else do
+            fileBeg <- B.hGetSome fileHandle 4096
+    
+            handleSize <- hFileSize fileHandle
+            hSetPosn (HandlePosn fileHandle (handleSize - 4096))
+            fileEnd <- B.hGetSome fileHandle 4096
+
+            return $ show $ sha1 (B.append fileBeg fileEnd)
+
+
+
+
 ------------------------------
 
 remove2simv (x:y:xs) = "-> " ++ xs
@@ -109,7 +134,7 @@ printFiles dirPath dirName strPath = do
     case decode NoHeader cvsFileInfo of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ curr@(FileInfo fName fDir hash) ->
-            if fDir == (takeDirectory dirPath ++ "/" ++ takeFileName dirName)
+            if fDir == (takeDirectory dirPath ++ "/" ++ dirName) || fDir == dirPath
                 then do 
                     isDir <- doesDirectoryExist (dirPath ++ "/" ++ fName)
                     if isDir

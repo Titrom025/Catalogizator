@@ -73,7 +73,6 @@ print_menu = do
     putStr $ "######################################################################" ++ "\n\n"
  
 
-io_handler :: IO b
 io_handler = do
     isSizeOfTerminalRight
     putStr "Option: "
@@ -90,6 +89,7 @@ io_handler = do
             removeFile (".system/.files.csv")
             getFilesInfo
             print_menu
+            io_handler
 
         "2" -> do
             clearScreen
@@ -104,6 +104,7 @@ io_handler = do
             setSGR [SetColor Foreground Vivid Yellow]
             clearScreen
             print_menu
+            io_handler
 
         "3" -> do
             clearScreen
@@ -120,12 +121,21 @@ io_handler = do
             setSGR [SetColor Foreground Vivid Yellow]
             clearScreen
             print_menu    
+            io_handler
         
         "4" -> do 
             putStr "\nInsert filename: "
             hFlush stdout
             filename <- getLine
             findDoublesByName filename
+            io_handler
+
+        "5" -> do
+            clearScreen
+            setSGR [SetColor Foreground Vivid Red]
+            putStrLn "Catalogizator stopped"
+            setSGR [SetColor Foreground Vivid White]
+            return ()
 
         otherwise -> do
             clearScreen 
@@ -133,5 +143,6 @@ io_handler = do
             putStr "Wrong option.\n\n"
             setSGR [SetColor Foreground Vivid Yellow]
             print_menu
+            io_handler
 
-    io_handler
+

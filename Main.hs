@@ -12,4 +12,3 @@ main = do
     print_menu
 
     io_handler
-

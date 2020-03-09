@@ -4,6 +4,7 @@ import Control.Concurrent.Thread.Delay
 import System.IO
 import FileHandler
 import System.Directory
+
 import System.Console.ANSI
 import Data.Maybe
 
@@ -100,6 +101,7 @@ io_handler = do
             printFiles "." "." " "
             setSGR [SetColor Foreground Vivid  Cyan]
             putStr "\nTo call menu press Enter"
+            hFlush stdout
             getLine
             setSGR [SetColor Foreground Vivid Yellow]
             clearScreen
@@ -117,6 +119,7 @@ io_handler = do
             printFiles currDir currDir " "
             setSGR [SetColor Foreground Vivid  Cyan]
             putStr "\nTo call menu press Enter"
+            hFlush stdout
             getLine
             setSGR [SetColor Foreground Vivid Yellow]
             clearScreen
@@ -135,6 +138,7 @@ io_handler = do
             setSGR [SetColor Foreground Vivid Red]
             putStrLn "Catalogizator stopped"
             setSGR [SetColor Foreground Vivid White]
+            removeDirectoryRecursive ".system"
             return ()
 
         otherwise -> do

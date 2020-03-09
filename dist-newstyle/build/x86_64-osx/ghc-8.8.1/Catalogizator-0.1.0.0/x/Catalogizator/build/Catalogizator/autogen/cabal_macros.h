@@ -55,6 +55,17 @@
   (major1) == 0 && (major2) == 5 && (minor) <= 2)
 #endif /* MIN_VERSION_cassava */
 
+/* package cryptonite-0.26 */
+#ifndef VERSION_cryptonite
+#define VERSION_cryptonite "0.26"
+#endif /* VERSION_cryptonite */
+#ifndef MIN_VERSION_cryptonite
+#define MIN_VERSION_cryptonite(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  26 || \
+  (major1) == 0 && (major2) == 26 && (minor) <= 0)
+#endif /* MIN_VERSION_cryptonite */
+
 /* package digest-pure-0.0.3 */
 #ifndef VERSION_digest_pure
 #define VERSION_digest_pure "0.0.3"
@@ -98,6 +109,17 @@
   (major1) == 1 && (major2) <  9 || \
   (major1) == 1 && (major2) == 9 && (minor) <= 3)
 #endif /* MIN_VERSION_time */
+
+/* package unbounded-delays-0.1.1.0 */
+#ifndef VERSION_unbounded_delays
+#define VERSION_unbounded_delays "0.1.1.0"
+#endif /* VERSION_unbounded_delays */
+#ifndef MIN_VERSION_unbounded_delays
+#define MIN_VERSION_unbounded_delays(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  1 || \
+  (major1) == 0 && (major2) == 1 && (minor) <= 1)
+#endif /* MIN_VERSION_unbounded_delays */
 
 /* package vector-0.12.1.2 */
 #ifndef VERSION_vector

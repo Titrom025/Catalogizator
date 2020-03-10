@@ -1,5 +1,4 @@
 # Catalogizator
-<<<<<<< HEAD
 ---
 #### To run Catalogizator app use `cabal build` and `cabal run` in project directory
 ---

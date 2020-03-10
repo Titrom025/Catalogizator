@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
---ScopedTypeVariables
 
 module FileHandler where
 
@@ -21,6 +20,9 @@ import Data.Csv (FromRecord, ToRecord, encode, decode, HasHeader(NoHeader))
 ----- Hash calculation -----
 import Crypto.Hash (SHA1, Digest, hash)
 import GHC.IO.Handle (HandlePosn(HandlePosn), HandlePosn, hSetPosn, hFileSize)
+
+import System.Console.ANSI (SGR(SetColor), setSGR, 
+    ConsoleLayer(Foreground), ColorIntensity(Vivid), Color(Blue, Cyan))
 
 
 ----- Create data types ----
@@ -178,7 +180,9 @@ printFiles dirPath dirName strPath currDir = do
 printListOfDirectories :: FilePath -> IO ()
 printListOfDirectories currDir = do
     csvData <- LB.readFile $ currDir </> ".system" </> ".dirs.csv"
-    putStrLn "Available dirs:"
+    setSGR [SetColor Foreground Vivid Cyan]
+    putStrLn "Available dirs:\n"
+    setSGR [SetColor Foreground Vivid Blue]
     case decode NoHeader csvData of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ (DirInfo name path) ->

@@ -4,10 +4,9 @@ import FileHandler
 import System.FilePath ((</>))
 import Control.Concurrent.Thread.Delay (delay)
 import System.IO (hFlush, stdout)
-import System.Directory (getCurrentDirectory, removeDirectoryRecursive, removeFile, doesFileExist)
+import System.Directory (getCurrentDirectory, removeDirectoryRecursive, removeFile, doesFileExist, doesDirectoryExist)
 import System.Console.ANSI (getTerminalSize, SGR(SetColor), setSGR, clearScreen, 
     ConsoleLayer(Foreground), ColorIntensity(Vivid), Color(Yellow, Red, Green, Blue, Cyan, White))
---import Data.Maybe
 
 ----- Get terminal size and check for correctness (greater then 70) -----
 isSizeOfTerminalRight :: IO ()
@@ -69,9 +68,9 @@ print_menu = do
     putStr $ "#                                                                    #" ++ "\n"
     putStr $ "#                 1 - rescan root dir                                #" ++ "\n"
     putStr $ "#                 2 - print file tree for root                       #" ++ "\n"
-    putStr $ "#                 3 - print file tree for directory by path          #" ++ "\n"
+    putStr $ "#                 3 + dirpath print file tree for directory by path  #" ++ "\n"
     putStr $ "#                 4 + filename - find doubles by name                #" ++ "\n"
-    putStr $ "#                 5 + filename - find doubles by content             #" ++ "\n"
+    putStr $ "#                 5 + filepath - find doubles by content             #" ++ "\n"
     putStr $ "#                 6 - stop Catalogizator                             #" ++ "\n"
     putStr $ "#                                                                    #" ++ "\n"
     putStr $ "######################################################################" ++ "\n\n"
@@ -111,6 +110,7 @@ io_handler = do
             getLine
             setSGR [SetColor Foreground Vivid Yellow]
             clearScreen
+
             print_menu
             io_handler
 
@@ -118,16 +118,24 @@ io_handler = do
             clearScreen
             setSGR [SetColor Foreground Vivid Blue]
             printListOfDirectories currDir
+            setSGR [SetColor Foreground Vivid Cyan]
             putStrLn "\nEnter path to directory to overlook:"
+            setSGR [SetColor Foreground Vivid Blue]
             currDirRaw <- getLine 
             let currDirNew = currDir </> currDirRaw
-            putStrLn $ currDirNew
-    
-            if currDirRaw == "."
+
+            existanse <- doesDirectoryExist currDirNew
+            if existanse && currDirRaw /= ""
                 then do
-                    printFiles currDir currDir " " currDir
-                else do 
-                    printFiles currDirNew currDirNew " " currDir
+                    putStrLn $ currDirNew
+                    if currDirRaw == "." 
+                        then do
+                            printFiles currDir currDir " " currDir
+                        else do 
+                            printFiles currDirNew currDirNew " " currDir
+                else do
+                    setSGR [SetColor Foreground Vivid Red]
+                    putStrLn "\nEnter correct directory path"
 
             setSGR [SetColor Foreground Vivid Cyan]
             putStr "\nTo call menu press Enter"
@@ -139,22 +147,34 @@ io_handler = do
             io_handler
         
         "4" -> do 
+            setSGR [SetColor Foreground Vivid Cyan]
             putStr "\nInsert filename: "
             hFlush stdout
+            setSGR [SetColor Foreground Vivid Blue]
             filename <- getLine
             existanse <- doesFileExist filename
             if existanse
                 then do
                     findDoublesByName filename currDir
+                    putStrLn ""
                 else do
                     setSGR [SetColor Foreground Vivid Red]
-                    putStrLn "Insert correct path to file"
-                    setSGR [SetColor Foreground Vivid Yellow]
+                    putStrLn "\nInsert correct path to file\n"
+
+            setSGR [SetColor Foreground Vivid Cyan]
+            putStr "To call menu press Enter"
+            hFlush stdout
+            getLine
+            setSGR [SetColor Foreground Vivid Yellow]
+            clearScreen
+            print_menu   
             io_handler
 
         "5" -> do
+            setSGR [SetColor Foreground Vivid Cyan]
             putStr "\nInsert path to file: "
             hFlush stdout
+            setSGR [SetColor Foreground Vivid Blue]
             path <- getLine
             existanse <- doesFileExist path
             if existanse
@@ -163,8 +183,15 @@ io_handler = do
                     findDoublesByContent hash currDir
                 else do
                     setSGR [SetColor Foreground Vivid Red]
-                    putStrLn "Insert correct path to file"
-                    setSGR [SetColor Foreground Vivid Yellow]
+                    putStrLn "\nInsert correct path to file"
+                
+            setSGR [SetColor Foreground Vivid Cyan]
+            putStr "\nTo call menu press Enter"
+            hFlush stdout
+            getLine
+            setSGR [SetColor Foreground Vivid Yellow]
+            clearScreen
+            print_menu   
             io_handler
 
         "6" -> do

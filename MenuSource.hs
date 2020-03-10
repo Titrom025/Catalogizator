@@ -1,16 +1,15 @@
 module MenuSource where 
 
-import System.FilePath
-import Control.Concurrent.Thread.Delay
-import System.IO
 import FileHandler
-import System.Directory
+import System.FilePath ((</>))
+import Control.Concurrent.Thread.Delay (delay)
+import System.IO (hFlush, stdout)
+import System.Directory (getCurrentDirectory, removeDirectoryRecursive, removeFile, doesFileExist)
+import System.Console.ANSI (getTerminalSize, SGR(SetColor), setSGR, clearScreen, 
+    ConsoleLayer(Foreground), ColorIntensity(Vivid), Color(Yellow, Red, Green, Blue, Cyan, White))
+--import Data.Maybe
 
-import System.Console.ANSI
-import Data.Maybe
-
------------------------------------
-
+----- Get terminal size and check for correctness (greater then 70) -----
 isSizeOfTerminalRight :: IO ()
 isSizeOfTerminalRight = do
     size <- getTerminalSize
@@ -25,7 +24,7 @@ isSizeOfTerminalRight = do
         else do
             return ()
 
-
+----- Check teminal size in loop -----
 checkWindowSize :: IO ()
 checkWindowSize = do
     size <- getTerminalSize
@@ -38,8 +37,7 @@ checkWindowSize = do
             clearScreen
             print_menu
 
-
-
+----- Collect dirs and files info from working directory -----
 getFilesInfo :: IO ()
 getFilesInfo = do
     currDir <- getCurrentDirectory
@@ -62,9 +60,6 @@ getFilesInfo = do
                 else do
                     scan_dir currDir currDir
 
-    
-    
-
 
 print_menu :: IO ()
 print_menu = do
@@ -82,7 +77,7 @@ print_menu = do
     putStr $ "######################################################################" ++ "\n\n"
  
 
-
+----- Main cycle of program: scan for op codes -----
 io_handler :: IO ()
 io_handler = do
     isSizeOfTerminalRight
@@ -126,9 +121,15 @@ io_handler = do
             putStrLn "\nEnter path to directory to overlook:"
             currDirRaw <- getLine 
             let currDirNew = currDir </> currDirRaw
+            putStrLn $ currDirNew
     
-            printFiles currDirNew currDirNew " " currDir
-            setSGR [SetColor Foreground Vivid  Cyan]
+            if currDirRaw == "."
+                then do
+                    printFiles currDir currDir " " currDir
+                else do 
+                    printFiles currDirNew currDirNew " " currDir
+
+            setSGR [SetColor Foreground Vivid Cyan]
             putStr "\nTo call menu press Enter"
             hFlush stdout
             getLine
@@ -149,7 +150,6 @@ io_handler = do
                     setSGR [SetColor Foreground Vivid Red]
                     putStrLn "Insert correct path to file"
                     setSGR [SetColor Foreground Vivid Yellow]
-    
             io_handler
 
         "5" -> do

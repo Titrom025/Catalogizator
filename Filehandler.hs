@@ -1,30 +1,30 @@
-{-# LANGUAGE ScopedTypeVariables, DeriveGeneric, BangPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
+--ScopedTypeVariables
 
 module FileHandler where
 
---------- Dir walk ---------
-import System.FilePath
-import System.Directory
-
----- Collect files info ----
---import System.Posix.Files
-import Data.Time.Clock.POSIX
-import Data.Digest.Pure.CRC32
+----- Dir walk -----
+import System.FilePath (takeFileName, takeDirectory, (</>))
+import System.Directory (removeFile, doesDirectoryExist, doesDirectoryExist,
+    getFileSize, createDirectory, getDirectoryContents)
 
 ------ Csv read/wrire ------
-import System.IO
-import Data.Csv
-import GHC.Generics
-import qualified Data.Vector as V
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as LB
-import GHC.IO.Handle
-import Crypto.Hash
+import System.IO (openFile, IOMode(ReadMode))
+import qualified Data.ByteString as B (append, hGetSome, ByteString, readFile)
+import qualified Data.ByteString.Lazy as LB (readFile, appendFile, writeFile)
+
+----- Work with .csv file info -----
+import GHC.Generics (Generic)
+import qualified Data.Vector as V (forM_, last)
+import Data.Csv (FromRecord, ToRecord, encode, decode, HasHeader(NoHeader))
+
+----- Hash calculation -----
+import Crypto.Hash (SHA1, Digest, hash)
+import GHC.IO.Handle (HandlePosn(HandlePosn), HandlePosn, hSetPosn, hFileSize)
+
 
 ----- Create data types ----
-
 data FileInfo = FileInfo FilePath FilePath String Integer deriving (Generic, Eq) 
-
 data DirInfo = DirInfo FilePath FilePath deriving (Generic, Eq)
 
 instance FromRecord FileInfo
@@ -34,52 +34,48 @@ instance FromRecord DirInfo
 instance ToRecord DirInfo
 
 
-
+----- Get file hash -----
 sha1 :: B.ByteString -> Digest SHA1
 sha1 = hash
+
 
 getHash :: FilePath -> IO String
 getHash file = do
     fileContent <- LB.readFile file
-
     fileHandle <- openFile file ReadMode
     fileSize <- hFileSize fileHandle
-    
     if fileSize < 10000
         then do
             fileContent <- B.readFile file
             return $ show $ sha1 fileContent
-
         else do
             fileBeg <- B.hGetSome fileHandle 4096
-    
             handleSize <- hFileSize fileHandle
             hSetPosn (HandlePosn fileHandle (handleSize - 4096))
             fileEnd <- B.hGetSome fileHandle 4096
-
             return $ show $ sha1 (B.append fileBeg fileEnd)
 
 
-
-
-------------------------------
+----- change "./" to "-> " in path -----
 remove2simv :: [Char] -> [Char]
 remove2simv (x:y:xs) = "-> " ++ xs
+remove2simv (x:_) = "-> " ++ [x]
 
+
+----- Replace absolute path to relative -----
 replacePath :: Foldable t => t a -> [Char] -> [Char]
 replacePath removeDir dir = "." ++ drop (length removeDir) dir
 
 
+----- Scan directory recursive and get list of dirs and files -----
 scan_dir :: FilePath -> FilePath -> IO ()
 scan_dir path currDir = do
-    !isSystemExist <- doesDirectoryExist $ currDir </> ".system"
-
+    isSystemExist <- doesDirectoryExist $ currDir </> ".system"
     if isSystemExist
         then do
             return ()
         else do
             createDirectory $ currDir </> ".system"
-
 
     isDirectory <- doesDirectoryExist path
     if isDirectory
@@ -87,26 +83,22 @@ scan_dir path currDir = do
             files <- getDirectoryContents path
             let list = [".", "..", ".DS_Store", ".git", ".gitignore", ".files.csv", ".system"]
             let nonDotFiles = filter (not . (`elem` list)) files
-
             LB.appendFile (currDir </> ".system" </> ".dirs.csv") $ encode [DirInfo (takeFileName path) (takeDirectory path)]
             mapM (\file -> scan_dir (path </> file) currDir) nonDotFiles
-        
             return ()
-
         else do
             hash <- getHash path
             size <- getFileSize path
             LB.appendFile (currDir </> ".system" </> ".files.csv") $ encode [FileInfo (takeFileName path) (takeDirectory path) hash size]
 
 
+----- Get content list of directory from .system files----- 
 collectInfo :: FilePath -> [Char] -> FilePath -> IO ()
 collectInfo dirPath dirName currDir = do
     csvFilesData <- LB.readFile (currDir </> ".system" </> ".files.csv")
     csvDirData <- LB.readFile (currDir </> ".system" </> ".dirs.csv")
-    
     LB.writeFile (currDir </> ".system" </> "Dirsinfo-" ++ dirName ++ ".csv") $  encode [DirInfo "dirName" "dirPath"]
     LB.writeFile (currDir </> ".system" </> "Fileinfo-" ++ dirName ++ ".csv") $  encode [FileInfo "fileName" "filePath" "hash" 0]
-
 
     case decode NoHeader csvFilesData of
         Left err -> putStrLn err
@@ -128,14 +120,14 @@ collectInfo dirPath dirName currDir = do
                     return ()
 
 
-
+----- Print recursive file tree of directory -----
 printFiles :: FilePath -> FilePath -> [Char] -> FilePath -> IO ()
 printFiles dirPath dirName strPath currDir = do
-    collectInfo dirPath (takeFileName dirName) currDir 
-
+    collectInfo dirPath (takeFileName dirName) currDir
 
     cvsFileInfo <- LB.readFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dirName ++ ".csv")
     removeFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dirName ++ ".csv")
+    
     case decode NoHeader cvsFileInfo of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ curr@(FileInfo fName fDir hash size) ->
@@ -169,13 +161,11 @@ printFiles dirPath dirName strPath currDir = do
                             cvsFileInfo <- LB.readFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
                             removeFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
 
-                            if show cvsFileInfo == "\"fileName,filePath,hash\\r\\n\""
+                            if show cvsFileInfo == "\"fileName,filePath,hash,0\\r\\n\""
                                 then do
                                     putStrLn $ strPath ++ "└─── " ++ dName
                                 else do
                                     putStrLn $ strPath ++ "└──┬ " ++ dName
-
-                            let x = LB.length cvsFileInfo
 
                             printFiles (dDir </> dName) dName (strPath ++ "   ") currDir
                         else do
@@ -192,9 +182,9 @@ printListOfDirectories currDir = do
     case decode NoHeader csvData of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ (DirInfo name path) ->
-            putStrLn $ remove2simv $ path </> name
+            putStrLn $ remove2simv (replacePath currDir (path </> name))
+      
 
-                
 findDoublesByName :: FilePath -> FilePath -> IO ()
 findDoublesByName search_name currDir = do
     csvData <- LB.readFile $ currDir </> ".system" </> ".files.csv"
@@ -219,5 +209,3 @@ findDoublesByContent soughtHash currDir = do
                     putStrLn $ "Name: " ++ name ++ "\", Dir: \""  ++ (replacePath currDir dir)
                 else do
                     return ()
-
-

@@ -23,7 +23,7 @@ import Crypto.Hash
 
 ----- Create data types ----
 
-data FileInfo = FileInfo FilePath FilePath String deriving (Generic, Eq) 
+data FileInfo = FileInfo FilePath FilePath String Integer deriving (Generic, Eq) 
 
 data DirInfo = DirInfo FilePath FilePath deriving (Generic, Eq)
 
@@ -63,19 +63,22 @@ getHash file = do
 
 
 ------------------------------
-
+remove2simv :: [Char] -> [Char]
 remove2simv (x:y:xs) = "-> " ++ xs
 
+replacePath :: Foldable t => t a -> [Char] -> [Char]
+replacePath removeDir dir = "." ++ drop (length removeDir) dir
 
---scan_dir :: FilePath -> IO ()
-scan_dir path = do
-    isSystemExist <- doesDirectoryExist ".system"
+
+scan_dir :: FilePath -> FilePath -> IO ()
+scan_dir path currDir = do
+    !isSystemExist <- doesDirectoryExist $ currDir </> ".system"
 
     if isSystemExist
         then do
             return ()
         else do
-            createDirectory ".system"
+            createDirectory $ currDir </> ".system"
 
 
     isDirectory <- doesDirectoryExist path
@@ -85,30 +88,32 @@ scan_dir path = do
             let list = [".", "..", ".DS_Store", ".git", ".gitignore", ".files.csv", ".system"]
             let nonDotFiles = filter (not . (`elem` list)) files
 
-            LB.appendFile (".system/.dirs.csv") $ encode [DirInfo (takeFileName path) (takeDirectory path)]
-            mapM (\file -> scan_dir (path </> file)) nonDotFiles
+            LB.appendFile (currDir </> ".system" </> ".dirs.csv") $ encode [DirInfo (takeFileName path) (takeDirectory path)]
+            mapM (\file -> scan_dir (path </> file) currDir) nonDotFiles
         
             return ()
 
         else do
             hash <- getHash path
-            LB.appendFile (".system/.files.csv") $ encode [FileInfo (takeFileName path) (takeDirectory path) hash]
+            size <- getFileSize path
+            LB.appendFile (currDir </> ".system" </> ".files.csv") $ encode [FileInfo (takeFileName path) (takeDirectory path) hash size]
 
 
-collectInfo dirPath dirName = do
-    csvFilesData <- LB.readFile (".system/.files.csv")
-    csvDirData <- LB.readFile (".system/.dirs.csv")
+collectInfo :: FilePath -> [Char] -> FilePath -> IO ()
+collectInfo dirPath dirName currDir = do
+    csvFilesData <- LB.readFile (currDir </> ".system" </> ".files.csv")
+    csvDirData <- LB.readFile (currDir </> ".system" </> ".dirs.csv")
     
-    LB.writeFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv") $  encode [DirInfo "dirName" "dirPath"]
-    LB.writeFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv") $  encode [FileInfo "fileName" "filePath" "hash"]
+    LB.writeFile (currDir </> ".system" </> "Dirsinfo-" ++ dirName ++ ".csv") $  encode [DirInfo "dirName" "dirPath"]
+    LB.writeFile (currDir </> ".system" </> "Fileinfo-" ++ dirName ++ ".csv") $  encode [FileInfo "fileName" "filePath" "hash" 0]
 
 
     case decode NoHeader csvFilesData of
         Left err -> putStrLn err
-        Right v -> V.forM_ v $ \ (FileInfo fName fDir hash) ->
+        Right v -> V.forM_ v $ \ (FileInfo fName fDir hash size) ->
             if dirPath == fDir
                 then do
-                    LB.appendFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv") $ encode [FileInfo fName fDir hash]
+                    LB.appendFile (currDir </> ".system" </> "Fileinfo-" ++ dirName ++ ".csv") $ encode [FileInfo fName fDir hash size]
                 else do
                     return ()
 
@@ -117,26 +122,26 @@ collectInfo dirPath dirName = do
         Right v -> V.forM_ v $ \ (DirInfo dName dDir) ->
             if dirPath == dDir && dirName /= dName 
                 then do
-                    LB.appendFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv") $  encode [DirInfo dName dDir]
-                    LB.appendFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv") $  encode [FileInfo dName dDir "0"]
+                    LB.appendFile (currDir </> ".system" </> "Dirsinfo-" ++ dirName ++ ".csv") $  encode [DirInfo dName dDir]
+                    LB.appendFile (currDir </> ".system" </> "Fileinfo-" ++ dirName ++ ".csv") $  encode [FileInfo dName dDir "0" 0]
                 else do
                     return ()
 
 
 
---printFiles :: [Char] -> FilePath -> [Char] -> IO ()
-printFiles dirPath dirName strPath = do
-    collectInfo dirPath dirName
+printFiles :: FilePath -> FilePath -> [Char] -> FilePath -> IO ()
+printFiles dirPath dirName strPath currDir = do
+    collectInfo dirPath (takeFileName dirName) currDir 
 
 
-    cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
-    removeFile (".system/Fileinfo-" ++ takeFileName dirName ++ ".csv")
+    cvsFileInfo <- LB.readFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dirName ++ ".csv")
+    removeFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dirName ++ ".csv")
     case decode NoHeader cvsFileInfo of
         Left err -> putStrLn err
-        Right v -> V.forM_ v $ \ curr@(FileInfo fName fDir hash) ->
-            if fDir == (takeDirectory dirPath ++ "/" ++ dirName) || fDir == dirPath
+        Right v -> V.forM_ v $ \ curr@(FileInfo fName fDir hash size) ->
+            if fDir == (takeDirectory dirPath </> takeFileName dirName) || fDir == dirPath
                 then do 
-                    isDir <- doesDirectoryExist (dirPath ++ "/" ++ fName)
+                    isDir <- doesDirectoryExist (dirPath </> fName)
                     if isDir
                         then do
                             return ()
@@ -150,19 +155,19 @@ printFiles dirPath dirName strPath = do
                 else do
                     return ()
 
-    csvDirInfo <- LB.readFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv")
-    removeFile (".system/Dirsinfo-" ++ takeFileName dirName ++ ".csv")
+    csvDirInfo <- LB.readFile (currDir </> ".system" </> "Dirsinfo-" ++ takeFileName dirName ++ ".csv")
+    removeFile (currDir </> ".system" </> "Dirsinfo-" ++ takeFileName dirName ++ ".csv")
 
     case decode NoHeader csvDirInfo of
         Left err -> putStrLn err
         Right v -> V.forM_ v $ \ curr@(DirInfo dName dDir) ->
-            if dirPath == dDir && dirName /= dName 
+            if dirPath == dDir && takeFileName dirName /= dName 
                 then do
                     if curr == (V.last v)
                         then do
-                            collectInfo (dDir ++ "/" ++ dName) dName
-                            cvsFileInfo <- LB.readFile (".system/Fileinfo-" ++ dName ++ ".csv")
-                            removeFile (".system/Fileinfo-" ++ dName ++ ".csv")
+                            collectInfo (dDir </> dName) (takeFileName dName) currDir
+                            cvsFileInfo <- LB.readFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
+                            removeFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
 
                             if show cvsFileInfo == "\"fileName,filePath,hash\\r\\n\""
                                 then do
@@ -170,17 +175,19 @@ printFiles dirPath dirName strPath = do
                                 else do
                                     putStrLn $ strPath ++ "└──┬ " ++ dName
 
-                            printFiles (dDir ++ "/" ++ dName) dName (strPath ++ "   ")
+                            let x = LB.length cvsFileInfo
+
+                            printFiles (dDir </> dName) dName (strPath ++ "   ") currDir
                         else do
                             putStrLn $ strPath ++ "├──┬ " ++ dName
-                            printFiles (dDir ++ "/" ++ dName) dName (strPath ++ "│  ")
+                            printFiles (dDir </> dName) dName (strPath ++ "│  ") currDir
                 else do
                     return ()
    
 
-
-printListOfDirectories = do
-    csvData <- LB.readFile ".system/.dirs.csv"
+printListOfDirectories :: FilePath -> IO ()
+printListOfDirectories currDir = do
+    csvData <- LB.readFile $ currDir </> ".system" </> ".dirs.csv"
     putStrLn "Available dirs:"
     case decode NoHeader csvData of
         Left err -> putStrLn err
@@ -188,17 +195,28 @@ printListOfDirectories = do
             putStrLn $ remove2simv $ path </> name
 
                 
-
-
-findDoublesByName :: FilePath -> IO ()
-findDoublesByName search_name = do
-    csvData <- LB.readFile ".system/.files.csv"
+findDoublesByName :: FilePath -> FilePath -> IO ()
+findDoublesByName search_name currDir = do
+    csvData <- LB.readFile $ currDir </> ".system" </> ".files.csv"
     case decode NoHeader csvData of
         Left err -> putStrLn err
-        Right v -> V.forM_ v $ \ (FileInfo name dir hash) ->
+        Right v -> V.forM_ v $ \ (FileInfo name dir hash size) ->
             if name == search_name
                 then do
-                    putStrLn $ "File: " ++ name ++ ", Dir: " ++ dir ++ ", Hash: " ++ hash
+                    putStrLn $ "Dir: \""  ++ (replacePath currDir dir) ++ "\", Size: " ++ (show size)
+                else do
+                    return ()
+
+
+findDoublesByContent :: String -> FilePath -> IO ()
+findDoublesByContent soughtHash currDir = do
+    csvData <- LB.readFile $ currDir </> ".system" </> ".files.csv"
+    case decode NoHeader csvData of
+        Left err -> putStrLn err
+        Right v -> V.forM_ v $ \ (FileInfo name dir hash size) ->
+            if soughtHash == hash
+                then do
+                    putStrLn $ "Name: " ++ name ++ "\", Dir: \""  ++ (replacePath currDir dir)
                 else do
                     return ()
 

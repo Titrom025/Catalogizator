@@ -1,5 +1,6 @@
 module MenuSource where 
 
+import System.FilePath
 import Control.Concurrent.Thread.Delay
 import System.IO
 import FileHandler
@@ -8,7 +9,9 @@ import System.Directory
 import System.Console.ANSI
 import Data.Maybe
 
+-----------------------------------
 
+isSizeOfTerminalRight :: IO ()
 isSizeOfTerminalRight = do
     size <- getTerminalSize
     let width = maybe 8 snd size
@@ -22,6 +25,8 @@ isSizeOfTerminalRight = do
         else do
             return ()
 
+
+checkWindowSize :: IO ()
 checkWindowSize = do
     size <- getTerminalSize
     let width = maybe 0 snd size
@@ -37,8 +42,9 @@ checkWindowSize = do
 
 getFilesInfo :: IO ()
 getFilesInfo = do
-    existenseDir <- doesFileExist (".system/.dirs.csv")
-    existenseFiles <- doesFileExist (".system/.files.csv") 
+    currDir <- getCurrentDirectory
+    existenseDir <- doesFileExist (currDir  </> ".system" </> ".dirs.csv")
+    existenseFiles <- doesFileExist (currDir  </> ".system" </> ".files.csv") 
 
     if existenseDir
         then do
@@ -46,15 +52,15 @@ getFilesInfo = do
                 then do
                     return ()
                 else do
-                    removeFile (".system/.dirs.csv")
-                    scan_dir "."
+                    removeFile (currDir  </> ".system" </> ".dirs.csv")
+                    scan_dir currDir currDir
         else do
             if existenseFiles
                 then do
-                    removeFile (".system/.files.csv")
-                    scan_dir "."
+                    removeFile (currDir  </> ".system" </> ".files.csv")
+                    scan_dir currDir currDir
                 else do
-                    scan_dir "."
+                    scan_dir currDir currDir
 
     
     
@@ -70,15 +76,20 @@ print_menu = do
     putStr $ "#                 2 - print file tree for root                       #" ++ "\n"
     putStr $ "#                 3 - print file tree for directory by path          #" ++ "\n"
     putStr $ "#                 4 + filename - find doubles by name                #" ++ "\n"
+    putStr $ "#                 5 + filename - find doubles by content             #" ++ "\n"
+    putStr $ "#                 6 - stop Catalogizator                             #" ++ "\n"
     putStr $ "#                                                                    #" ++ "\n"
     putStr $ "######################################################################" ++ "\n\n"
  
 
+
+io_handler :: IO ()
 io_handler = do
     isSizeOfTerminalRight
     putStr "Option: "
     hFlush stdout
     command <- getLine
+    currDir <- getCurrentDirectory
  
     case command of 
         "1" -> do 
@@ -86,8 +97,8 @@ io_handler = do
             setSGR [SetColor Foreground Vivid Green]
             putStrLn "Rescan complete.\n"
             setSGR [SetColor Foreground Vivid Yellow]
-            removeFile (".system/.dirs.csv")
-            removeFile (".system/.files.csv")
+            removeFile (currDir </> ".system" </> ".dirs.csv")
+            removeFile (currDir </> ".system" </> ".files.csv")
             getFilesInfo
             print_menu
             io_handler
@@ -98,7 +109,7 @@ io_handler = do
             setSGR [SetColor Foreground Vivid Blue]
             currDir <- getCurrentDirectory
             putStrLn $ currDir 
-            printFiles "." "." " "
+            printFiles currDir currDir " " currDir
             setSGR [SetColor Foreground Vivid  Cyan]
             putStr "\nTo call menu press Enter"
             hFlush stdout
@@ -111,12 +122,12 @@ io_handler = do
         "3" -> do
             clearScreen
             setSGR [SetColor Foreground Vivid Blue]
-            printListOfDirectories
+            printListOfDirectories currDir
             putStrLn "\nEnter path to directory to overlook:"
             currDirRaw <- getLine 
-            let currDir = "./" ++ currDirRaw
+            let currDirNew = currDir </> currDirRaw
     
-            printFiles currDir currDir " "
+            printFiles currDirNew currDirNew " " currDir
             setSGR [SetColor Foreground Vivid  Cyan]
             putStr "\nTo call menu press Enter"
             hFlush stdout
@@ -130,15 +141,38 @@ io_handler = do
             putStr "\nInsert filename: "
             hFlush stdout
             filename <- getLine
-            findDoublesByName filename
+            existanse <- doesFileExist filename
+            if existanse
+                then do
+                    findDoublesByName filename currDir
+                else do
+                    setSGR [SetColor Foreground Vivid Red]
+                    putStrLn "Insert correct path to file"
+                    setSGR [SetColor Foreground Vivid Yellow]
+    
             io_handler
 
         "5" -> do
+            putStr "\nInsert path to file: "
+            hFlush stdout
+            path <- getLine
+            existanse <- doesFileExist path
+            if existanse
+                then do
+                    hash <- getHash path
+                    findDoublesByContent hash currDir
+                else do
+                    setSGR [SetColor Foreground Vivid Red]
+                    putStrLn "Insert correct path to file"
+                    setSGR [SetColor Foreground Vivid Yellow]
+            io_handler
+
+        "6" -> do
             clearScreen
             setSGR [SetColor Foreground Vivid Red]
             putStrLn "Catalogizator stopped"
             setSGR [SetColor Foreground Vivid White]
-            removeDirectoryRecursive ".system"
+            removeDirectoryRecursive $ currDir </> ".system"
             return ()
 
         otherwise -> do

@@ -157,22 +157,26 @@ printFiles dirPath dirName strPath currDir = do
         Right v -> V.forM_ v $ \ curr@(DirInfo dName dDir) ->
             if dirPath == dDir && takeFileName dirName /= dName 
                 then do
+                    collectInfo (dDir </> dName) (takeFileName dName) currDir
+                    cvsFileInfo <- LB.readFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
+                    removeFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
                     if curr == (V.last v)
                         then do
-                            collectInfo (dDir </> dName) (takeFileName dName) currDir
-                            cvsFileInfo <- LB.readFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
-                            removeFile (currDir </> ".system" </> "Fileinfo-" ++ takeFileName dName ++ ".csv")
-
                             if show cvsFileInfo == "\"fileName,filePath,hash,0\\r\\n\""
                                 then do
-                                    putStrLn $ strPath ++ "└─── " ++ dName
+                                    putStrLn $ strPath ++ "└──< " ++ dName
                                 else do
                                     putStrLn $ strPath ++ "└──┬ " ++ dName
 
                             printFiles (dDir </> dName) dName (strPath ++ "   ") currDir
                         else do
-                            putStrLn $ strPath ++ "├──┬ " ++ dName
-                            printFiles (dDir </> dName) dName (strPath ++ "│  ") currDir
+                            if show cvsFileInfo == "\"fileName,filePath,hash,0\\r\\n\""
+                                then do
+                                    putStrLn $ strPath ++ "├──< " ++ dName
+                                    printFiles (dDir </> dName) dName (strPath ++ "│  ") currDir
+                                else do
+                                    putStrLn $ strPath ++ "├──┬ " ++ dName
+                                    printFiles (dDir </> dName) dName (strPath ++ "│  ") currDir
                 else do
                     return ()
    

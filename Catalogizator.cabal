@@ -21,6 +21,6 @@ executable Catalogizator
   main-is:             Main.hs
   other-modules:    Filehandler, MenuSource	
   -- other-extensions:
-  build-depends:       base >=4.13 && <4.14, vector == 0.12.1.2, filepath == 1.4.2.1, directory == 1.3.3.2, time == 1.9.3, bytestring == 0.10.9.0, digest-pure, cassava == 0.5.2.0, ansi-terminal == 0.10.3, unbounded-delays, cryptonite == 0.26
+  build-depends:       base, vector, filepath, directory, time, bytestring, digest-pure, cassava, ansi-terminal, unbounded-delays, cryptonite
   -- hs-source-dirs:
   default-language:    Haskell2010

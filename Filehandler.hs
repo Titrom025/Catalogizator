@@ -72,13 +72,6 @@ replacePath removeDir dir = "." ++ drop (length removeDir) dir
 ----- Scan directory recursive and get list of dirs and files -----
 scan_dir :: FilePath -> FilePath -> IO ()
 scan_dir path currDir = do
-    isSystemExist <- doesDirectoryExist $ currDir </> ".system"
-    if isSystemExist
-        then do
-            return ()
-        else do
-            createDirectory $ currDir </> ".system"
-
     isDirectory <- doesDirectoryExist path
     if isDirectory
         then do

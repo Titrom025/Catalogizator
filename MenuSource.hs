@@ -1,10 +1,11 @@
 module MenuSource where 
 
 import FileHandler
-import System.FilePath ((</>))
+import System.FilePath ((</>), takeDirectory)
+import System.Environment
 import Control.Concurrent.Thread.Delay (delay)
 import System.IO (hFlush, stdout)
-import System.Directory (getCurrentDirectory, removeDirectoryRecursive, removeFile, doesFileExist, doesDirectoryExist)
+import System.Directory (getCurrentDirectory, removeDirectoryRecursive, removeFile, doesFileExist, createDirectory, doesDirectoryExist)
 import System.Console.ANSI (getTerminalSize, SGR(SetColor), setSGR, clearScreen, 
     ConsoleLayer(Foreground), ColorIntensity(Vivid), Color(Yellow, Red, Green, Blue, Cyan, White))
 
@@ -36,10 +37,31 @@ checkWindowSize = do
             clearScreen
             print_menu
 
+
+getCurrDir :: IO FilePath
+getCurrDir = do
+    executable <- getProgName
+    if executable == "<interactive>"
+        then do
+            currDir <- getCurrentDirectory
+            return currDir
+        else do
+            currDir <- fmap takeDirectory getExecutablePath
+            return currDir
+
+
 ----- Collect dirs and files info from working directory -----
 getFilesInfo :: IO ()
 getFilesInfo = do
-    currDir <- getCurrentDirectory
+
+    currDir <- getCurrDir
+    isSystemExist <- doesDirectoryExist $ currDir </> ".system"
+    if isSystemExist
+        then do
+            return ()
+        else do
+            createDirectory $ currDir </> ".system"
+
     existenseDir <- doesFileExist (currDir  </> ".system" </> ".dirs.csv")
     existenseFiles <- doesFileExist (currDir  </> ".system" </> ".files.csv") 
 
@@ -83,7 +105,8 @@ io_handler = do
     putStr "Option: "
     hFlush stdout
     command <- getLine
-    currDir <- getCurrentDirectory
+
+    currDir <- getCurrDir
  
     case command of 
         "1" -> do 
@@ -101,7 +124,6 @@ io_handler = do
             clearScreen
             getFilesInfo
             setSGR [SetColor Foreground Vivid Blue]
-            currDir <- getCurrentDirectory
             putStrLn $ currDir 
             printFiles currDir currDir " " currDir
             setSGR [SetColor Foreground Vivid  Cyan]

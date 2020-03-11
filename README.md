@@ -1,6 +1,6 @@
 # Catalogizator
 ---
-#### To run Catalogizator app use `cabal build` and `cabal run` in project directory
+#### To run Catalogizator app use `cabal install --force-reinstalls` and `cabal run` in project directory
 ---
 ### Catalogizator can:
 

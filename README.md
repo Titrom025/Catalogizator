@@ -28,4 +28,4 @@
 - `├──┬ packagedb` - directory with content (not last in directory, where ***dist-newstyle*** located)
 - `├─── package.cache` - file in directory ***ghc-8.8.1*** (not last)
 - `└─── package.cache.lock` - last file in directory ***ghc-8.8.1***
-- `├──< tmp` - em
+- `├──< tmp` - empty directory

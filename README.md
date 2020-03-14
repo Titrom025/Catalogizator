@@ -26,8 +26,8 @@
        │     └─── package.cache.lock
        
 ### In this example:
-- `└──┬ dist-newstyle` - directory with content (last in directory, where ***dist-newstyle*** located)
-- `├──┬ packagedb` - directory with content (not last in directory, where ***dist-newstyle*** located)
+- `└──┬ dist-newstyle` / `└──┬ ghc-8.8.1` - directories with content (last in directory, where ***dist-newstyle*** / ***ghc-8.8.1*** located)
+- `├──┬ packagedb` - directory with content (not last in directory, where ***packagedb*** located)
 - `├─── package.cache` - file in directory ***ghc-8.8.1*** (not last)
-- `└─── package.cache.lock` - last file in directory ***ghc-8.8.1***
 - `├──< tmp` - empty directory
+- `└─── package.cache.lock` - last file in directory ***ghc-8.8.1***
